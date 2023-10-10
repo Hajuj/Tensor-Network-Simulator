@@ -174,7 +174,7 @@ class TNtemplate:
 
 
 if __name__ == "__main__":
-  c = parseQCP("code/QCPBench/small/test_n1.qcp")
-  #c = parseQCP("../QCPBench/small/bb84_n8.qcp")
+  #c = parseQCP("code/QCPBench/small/test_n1.qcp")
+  c = parseQCP("QCPBench/small/test_n1.qcp")
   simulator = TNtemplate(c)
   simulator.simulate()
