@@ -10,7 +10,7 @@ class TNtemplate:
     self.circ = circ
     self.tensor_network = []
     for i in range(self.circ.numQubits):
-      zero_tensor = np.zeros((1, 1, 2), dtype=complex)
+      zero_tensor = np.zeros((2, 1, 1), dtype=complex)
       zero_tensor[0, 0, 0] = 1
       self.tensor_network.append(zero_tensor)
       self.chi = 30
@@ -31,26 +31,26 @@ class TNtemplate:
   def x(self, gate: Gate):
     x_gate = np.array([[0, 1], [1, 0]])
     target_tensor = self.tensor_network[gate.target]
-    modified_tensor = np.einsum('abc,dc->abd', target_tensor, x_gate)
+    modified_tensor = np.einsum('abc,da->dbc', target_tensor, x_gate)
     self.tensor_network[gate.target] = modified_tensor
 
   def y(self, gate):
     y_gate = np.array([[0, -1j], [1j, 0]])
     target_tensor = self.tensor_network[gate.target]
-    modified_tensor = np.einsum('abc,dc->abd', target_tensor, y_gate)
+    modified_tensor = np.einsum('abc,da->dbc', target_tensor, y_gate)
     self.tensor_network[gate.target] = modified_tensor
 
   def z(self, gate):
     z_gate = np.array([[1, 0], [0, -1]])
     target_tensor = self.tensor_network[gate.target]
-    modified_tensor = np.einsum('abc,dc->abd', target_tensor, z_gate)
+    modified_tensor = np.einsum('abc,da->dbc', target_tensor, z_gate)
     self.tensor_network[gate.target] = modified_tensor
 
   def h(self, gate):
     h_gate = np.array([[1, 1], [1, -1]])
     h_gate = h_gate / np.sqrt(2)
     target_tensor = self.tensor_network[gate.target]
-    modified_tensor = np.einsum('abc,dc->abd', target_tensor, h_gate)
+    modified_tensor = np.einsum('abc,da->dbc', target_tensor, h_gate)
     self.tensor_network[gate.target] = modified_tensor
 
   def cx(self, gate):
@@ -84,11 +84,11 @@ class TNtemplate:
     ## Contract M(n) & M(n+1) to T
     print("Control: ", control_tensor)
     print("Target: ", target_tensor)
-    T = np.einsum('abc,bde->adce', control_tensor, target_tensor)
+    T = np.einsum('abc,dce->adbe', control_tensor, target_tensor)
     print("Contracted 4 dim T: ", T)
 
     ## Contract U and T to T'
-    T_strich = np.einsum('abcd,efcd->efab', U_gate, T)
+    T_strich = np.einsum('abcd,cdef->abef', U_gate, T)
     print("Contracted 4 dim UT aka. T': ", T_strich)
 
     ## Apply SVD to obtain U, S, V^T
@@ -116,7 +116,7 @@ class TNtemplate:
     self.tensor_network[gate.control] = M_strich
     self.tensor_network[gate.target] = M1_strich
     
-    print("Result: ", M_strich[0] @ M1_strich[1])
+    print("Result: ", M_strich[1] @ M1_strich[1])
     
 
     
