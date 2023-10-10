@@ -216,11 +216,10 @@ class TNtemplate:
     result = numerator/denominator
     self.tensor_network = np.matmul(result, self.tensor_network)
 
-
-
+np.set_printoptions(suppress=True)
 
 if __name__ == "__main__":
-  #c = parseQCP("code/QCPBench/small/test_n1.qcp")
-  c = parseQCP("QCPBench/small/test_n1.qcp")
-  simulator = TNtemplate(c)
-  simulator.simulate()
+    # c = parseQCP("code/QCPBench/small/test_n1.qcp")
+    c = parseQCP("../QCPBench/small/test_n1.qcp")
+    simulator = TNtemplate(c)
+    simulator.simulate()
