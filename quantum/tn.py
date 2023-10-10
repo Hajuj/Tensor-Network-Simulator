@@ -4,6 +4,7 @@ import numpy as np
 class TNtemplate:
   circ = None
   tensor_network: np.ndarray
+  chi: int
 
   def __init__(self, circ: QCPcircuit) -> None:
     self.circ = circ
@@ -12,6 +13,7 @@ class TNtemplate:
       zero_tensor = np.zeros((1, 1, 2), dtype=complex)
       zero_tensor[0, 0, 0] = 1
       self.tensor_network.append(zero_tensor)
+      self.chi = 30
 
   def iterate_circ(self):
     if (self.circ is None): raise Exception("circ is None") 
@@ -53,26 +55,70 @@ class TNtemplate:
 
   def cx(self, gate):
     # Setup
-    zero = np.array([[1, 0], [0, 0]])
-    one = np.array([[0, 0], [0, 1]])
-    x_gate = np.array([[0, 1], [1, 0]])
-    identity = np.identity(2)
+    # zero = np.array([[1, 0], [0, 0]])
+    # one = np.array([[0, 0], [0, 1]])
+    # x_gate = np.array([[0, 1], [1, 0]])
+    # identity = np.identity(2)
 
-    identities = [identity for _ in range(self.circ.numQubits)]
-    identities_x = [identity for _ in range(self.circ.numQubits)]
+    # identities = [identity for _ in range(self.circ.numQubits)]
+    # identities_x = [identity for _ in range(self.circ.numQubits)]
 
-    identities[gate.control] = zero
-    identities_x[gate.control] = one
-    identities_x[gate.target] = x_gate
+    # identities[gate.control] = zero
+    # identities_x[gate.control] = one
+    # identities_x[gate.target] = x_gate
 
-    unitary_1 = unitary_2 = 1
-    for iden, iden_x in zip(identities, identities_x):
-        unitary_1 = np.kron(iden, unitary_1)
-        unitary_2 = np.kron(iden_x, unitary_2)
-    
+    # unitary_1 = unitary_2 = 1
+    # for iden, iden_x in zip(identities, identities_x):
+    #     unitary_1 = np.kron(iden, unitary_1)
+    #     unitary_2 = np.kron(iden_x, unitary_2)
+
     # Apply
-    unitary = unitary_1 + unitary_2
-    self.tensor_network = np.matmul(unitary, self.tensor_network)
+    # unitary = unitary_1 + unitary_2
+    # self.tensor_network = np.matmul(unitary, self.tensor_network)
+
+    ## Setup
+    control_tensor = self.tensor_network[gate.control]
+    target_tensor = self.tensor_network[gate.target]
+    U_gate = np.array([[[[1, 0], [0, 0]], [[0, 1], [0, 0]]], [[[0, 0], [0, 1]], [[0, 0], [1, 0]]]])
+    
+    ## Contract M(n) & M(n+1) to T
+    print("Control: ", control_tensor)
+    print("Target: ", target_tensor)
+    T = np.einsum('abc,bde->adce', control_tensor, target_tensor)
+    print("Contracted 4 dim T: ", T)
+
+    ## Contract U and T to T'
+    T_strich = np.einsum('abcd,efcd->efab', U_gate, T)
+    print("Contracted 4 dim UT aka. T': ", T_strich)
+
+    ## Apply SVD to obtain U, S, V^T
+    E, F, A, B = T_strich.shape
+    T_strich_reshaped = T_strich.reshape((E * A, F * B))
+    print(T_strich_reshaped)
+    U, S, V_dagger = np.linalg.svd(T_strich_reshaped, full_matrices=False)
+    #V = np.conj(V_dagger).T ## check if it works
+    print("S: ", S)
+    # S_diag = np.diag(S[:self.chi])  # chi is the bond dimension you want to keep
+
+    # ## check truncation
+    # U_truncated = U[:, self.chi]
+    # S_truncated = S[self.chi]
+    # V_truncated = V_dagger[self.chi, :]
+
+    
+    # Multiply singular values into U and V
+    M_strich = np.array(np.vsplit(np.matmul(U, np.diag(S)), 2)) #vsplit
+    M1_strich = np.array(np.hsplit(V_dagger, 2)) #hsplit
+
+    print("M_strich: ", M_strich)
+    print("M1_strich: ", M1_strich)
+
+    self.tensor_network[gate.control] = M_strich
+    self.tensor_network[gate.target] = M1_strich
+    
+    print("Result: ", M_strich[0] @ M1_strich[1])
+    
+
     
   def cz(self, gate):
     # Setup
