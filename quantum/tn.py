@@ -51,18 +51,18 @@ class TNtemplate:
         self.tensor_network[gate.target] = modified_tensor
 
 
-    def apply_two_qubit_gate(self, gate: Gate, u_gate: np.ndarray):
+    def _apply_two_qubit_gate_logic(self, gate: Gate, u_gate: np.ndarray):
         # Decide the order of tensors and rearrange unitary if needed
         ## reversed order
         if gate.control > gate.target:
             control_tensor = self.tensor_network[gate.target]
             target_tensor = self.tensor_network[gate.control]
             u_gate = np.swapaxes(np.swapaxes(u_gate, 0, 1), 2, 3)  # Swap control and target in the unitary
-            print("U-Gate: ", u_gate)
-            print(u_gate.shape)
+            print("Have to Swap!!!!!!!!!!!!!!!!!!!!!!!!!")
         else:
             control_tensor = self.tensor_network[gate.control]
             target_tensor = self.tensor_network[gate.target]
+            print("No Swap!!!!!!!!!!!!!!!!!!!!!!!!!")
 
 
         # Two Qubit Gate Procedure
@@ -76,8 +76,6 @@ class TNtemplate:
         print("Contracted 4 dim UT aka. T': ", T_strich)
 
         ## Apply SVD to obtain U, S, V^T
-        E, F, A, B = T_strich.shape
-        print("PRINT TSTRICH: ", T_strich)
         T_strich_reshaped = np.concatenate((np.concatenate((T_strich[0][0], T_strich[0][1]), axis=1),
                             np.concatenate((T_strich[1][0], T_strich[1][1]), axis=1)), axis=0)
         U, S, V_dagger = np.linalg.svd(T_strich_reshaped, full_matrices=False)
@@ -103,6 +101,37 @@ class TNtemplate:
             self.tensor_network[gate.control], self.tensor_network[gate.target] = M_strich, M1_strich
 
         print("Result: ", M_strich[1] @ M1_strich[1])
+
+    
+    def swap(self, gate):
+        U_swap = np.array([
+        [1, 0, 0, 0],
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 1]
+        ]).reshape(2, 2, 2, 2)
+        self.apply_two_qubit_gate(gate, U_swap)
+
+    def apply_two_qubit_gate(self, gate, u_gate):
+        delta = abs(gate.control - gate.target)
+        if delta > 1:
+            min_qubit = min(gate.control, gate.target)
+            max_qubit = max(gate.control, gate.target)
+
+            for i in range(min_qubit, max_qubit):
+                self.swap(Gate("swap", i, i + 1))
+                print("Swap in the one direction, time: ", i)
+
+            new_control = 1 if gate.control == max_qubit else 0
+            new_target = 1 if gate.target == max_qubit else 0
+            self._apply_two_qubit_gate_logic(Gate(gate.name, new_control, new_target), u_gate)
+
+            for i in range(max_qubit - 1, min_qubit, -1):
+                self.swap(Gate("swap", i, i - 1))
+                print("Swap in the one direction, time: ", i)
+        else:
+            self._apply_two_qubit_gate_logic(gate, u_gate)
+            print("Apply Gate: ", gate.name)
 
 
     def cx(self, gate):
