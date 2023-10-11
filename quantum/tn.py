@@ -24,7 +24,6 @@ class TNtemplate:
             print("Gate: ", gate.name, " applied!")
             print("Tensornetwork after Gate: ", self.tensor_network)
 
-
     def simulate(self):
         # Iterate Circuit
         self.iterate_circ()
@@ -50,25 +49,23 @@ class TNtemplate:
         modified_tensor = np.einsum('abc,da->dbc', target_tensor, u_gate)
         self.tensor_network[gate.target] = modified_tensor
 
-
-    def apply_two_qubit_gate(self, gate: Gate, u_gate: np.ndarray):
+    def _apply_two_qubit_gate_logic(self, gate: Gate, u_gate: np.ndarray):
         # Decide the order of tensors and rearrange unitary if needed
         ## reversed order
         if gate.control > gate.target:
-            control_tensor = self.tensor_network[gate.target]
-            target_tensor = self.tensor_network[gate.control]
+            qubit0 = self.tensor_network[gate.target]
+            qubit1 = self.tensor_network[gate.control]
             u_gate = np.swapaxes(np.swapaxes(u_gate, 0, 1), 2, 3)  # Swap control and target in the unitary
-            print("U-Gate: ", u_gate)
-            print(u_gate.shape)
+            print("Have to Swap!!!!!!!!!!!!!!!!!!!!!!!!!")
         else:
-            control_tensor = self.tensor_network[gate.control]
-            target_tensor = self.tensor_network[gate.target]
-
+            qubit0 = self.tensor_network[gate.control]
+            qubit1 = self.tensor_network[gate.target]
+            print("No Swap!!!!!!!!!!!!!!!!!!!!!!!!!")
 
         # Two Qubit Gate Procedure
-        print("Control: ", control_tensor)
-        print("Target: ", target_tensor)
-        T = np.einsum('abc,dce->adbe', control_tensor, target_tensor)
+        print("Control: ", qubit0)
+        print("Target: ", qubit1)
+        T = np.einsum('abc,dce->adbe', qubit0, qubit1)
         print("Contracted 4 dim T: ", T)
 
         ## Contract U and T to T'
@@ -76,18 +73,16 @@ class TNtemplate:
         print("Contracted 4 dim UT aka. T': ", T_strich)
 
         ## Apply SVD to obtain U, S, V^T
-        E, F, A, B = T_strich.shape
-        print("PRINT TSTRICH: ", T_strich)
         T_strich_reshaped = np.concatenate((np.concatenate((T_strich[0][0], T_strich[0][1]), axis=1),
-                            np.concatenate((T_strich[1][0], T_strich[1][1]), axis=1)), axis=0)
+                                            np.concatenate((T_strich[1][0], T_strich[1][1]), axis=1)), axis=0)
         U, S, V_dagger = np.linalg.svd(T_strich_reshaped, full_matrices=False)
 
-        chi_min = min(self.chi, len(S)) ## error checking for chi TODO: Make this more sophisticated
+        chi_min = min(self.chi, len(S))  ## error checking for chi TODO: Make this more sophisticated
         S_diag = np.diag(S[:self.chi])
         U = U[:, :chi_min]
         V_dagger = V_dagger[:chi_min, :]
 
-        print("Truncation to: ", chi_min, " from ", len(S), 
+        print("Truncation to: ", chi_min, " from ", len(S),
               " and S had shape: ", S.shape, " while S_diag trunc. has: ", S_diag.shape)
 
         # M = US, M' = V
@@ -104,25 +99,59 @@ class TNtemplate:
 
         print("Result: ", M_strich[1] @ M1_strich[1])
 
+    def swap(self, gate):
+        U_swap = np.array([
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1]
+        ]).reshape(2, 2, 2, 2)
+        self.apply_two_qubit_gate(gate, U_swap)
+
+    def apply_two_qubit_gate(self, gate, u_gate):
+        delta = abs(gate.control - gate.target)
+        if delta > 1:
+            min_qubit = min(gate.control, gate.target)
+            max_qubit = max(gate.control, gate.target)
+
+            for i in range(min_qubit, max_qubit):
+                self.swap(Gate("swap", i, i + 1))
+                print("Swap in the one direction, time: ", i)
+
+            flag_control = 1 if gate.control == max_qubit else 0
+
+            # When I move target from min to max - 1
+            if flag_control == 1:
+                self._apply_two_qubit_gate_logic(Gate(gate.name, control=max_qubit, target=max_qubit - 1), u_gate)
+            # When I move control from min to max - 1
+            else:
+                self._apply_two_qubit_gate_logic(Gate(gate.name, control=max_qubit - 1, target=max_qubit), u_gate)
+
+            # Bring tensor to original order
+            for i in range(max_qubit - 1, min_qubit, -1):
+                self.swap(Gate("swap", i, i - 1))
+                print("Swap in the one direction, time: ", i)
+        else:
+            self._apply_two_qubit_gate_logic(gate, u_gate)
+            print("Apply Gate: ", gate.name)
 
     def cx(self, gate):
         U_cx = np.array([
-          [1, 0, 0, 0],
-          [0, 1, 0, 0],
-          [0, 0, 0, 1],
-          [0, 0, 1, 0]
-      ]).reshape(2, 2, 2, 2)
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0]
+        ]).reshape(2, 2, 2, 2)
         self.apply_two_qubit_gate(gate, U_cx)
 
-
     def cz(self, gate):
-      U_cz = np.array([
-          [1, 0, 0, 0],
-          [0, 1, 0, 0],
-          [0, 0, 1, 0],
-          [0, 0, 0, -1]
-      ]).reshape(2, 2, 2, 2)
-      self.apply_two_qubit_gate(gate, U_cz)
+        U_cz = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, -1]
+        ]).reshape(2, 2, 2, 2)
+        self.apply_two_qubit_gate(gate, U_cz)
 
     def cy(self, gate):
         U_cy = np.array([
@@ -132,7 +161,6 @@ class TNtemplate:
             [0, 0, 1j, 0]
         ]).reshape(2, 2, 2, 2)
         self.apply_two_qubit_gate(gate, U_cy)
-
 
     def rx(self, gate):
         angle = gate.param
@@ -187,6 +215,6 @@ np.set_printoptions(suppress=True)
 
 if __name__ == "__main__":
     # c = parseQCP("code/QCPBench/small/test_n1.qcp")
-    c = parseQCP("QCPBench/small/test_n1.qcp")
+    c = parseQCP("../QCPBench/small/test_n1.qcp")
     simulator = TNtemplate(c)
     simulator.simulate()

@@ -7,8 +7,10 @@ class Gate:
     target = None
     control = None
 
-    def __init__(self, name):
+    def __init__(self, name, control=None, target=None):
         self.name = name
+        self.control = control
+        self.target = target
 
     def __repr__(self):
         return self.name
