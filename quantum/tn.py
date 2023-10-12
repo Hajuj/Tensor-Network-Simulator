@@ -1,35 +1,37 @@
 from parseQCP import *
 import numpy as np
 
+
 class QuantumGates:
     X = np.array([[0, 1], [1, 0]], dtype=complex)
     Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
     Z = np.array([[1, 0], [0, -1]], dtype=complex)
     H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     SWAP = np.array([
-            [1, 0, 0, 0],
-            [0, 0, 1, 0],
-            [0, 1, 0, 0],
-            [0, 0, 0, 1]
-        ]).reshape(2, 2, 2, 2)
+        [1, 0, 0, 0],
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 1]
+    ]).reshape(2, 2, 2, 2)
     CX = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 0, 1],
-            [0, 0, 1, 0]
-        ]).reshape(2, 2, 2, 2)
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 1],
+        [0, 0, 1, 0]
+    ]).reshape(2, 2, 2, 2)
     CZ = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, -1]
-        ]).reshape(2, 2, 2, 2)
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, -1]
+    ]).reshape(2, 2, 2, 2)
     CY = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 0, -1j],
-            [0, 0, 1j, 0]
-        ]).reshape(2, 2, 2, 2)
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, -1j],
+        [0, 0, 1j, 0]
+    ]).reshape(2, 2, 2, 2)
+
 
 class TNtemplate:
     circ = None
@@ -46,17 +48,17 @@ class TNtemplate:
             self.chi = 2
 
     def iterate_circ(self):
-      if not self.circ:
-          raise Exception("circ is None")
-      print("Initial Tensor:", self.tensor_network)
-      for gate in self.circ.gates:
-          getattr(self, gate.name)(gate)
-          print(f"Gate {gate.name} applied!")
-          print("Tensornetwork after Gate:", self.tensor_network)
+        if not self.circ:
+            raise Exception("circ is None")
+        print("Initial Tensor:", self.tensor_network)
+        for gate in self.circ.gates:
+            getattr(self, gate.name)(gate)
+            print(f"Gate {gate.name} applied!")
+            print("Tensornetwork after Gate:", self.tensor_network)
 
-      print("\nFINAL MPS")
-      for i, tensor in enumerate(self.tensor_network):
-          print(f"Qubit {i} Tensor is:\n{tensor}\n")
+        print("\nFINAL MPS")
+        for i, tensor in enumerate(self.tensor_network):
+            print(f"Qubit {i} Tensor is:\n{tensor}\n")
 
     def simulate(self):
         # Iterate Circuit
@@ -118,7 +120,6 @@ class TNtemplate:
         else:
             self.tensor_network[gate.control], self.tensor_network[gate.target] = M_strich, M1_strich
 
-
     def swap(self, gate):
         self.apply_two_qubit_gate(gate, QuantumGates.SWAP)
 
@@ -177,6 +178,7 @@ class TNtemplate:
 
     def measure(self, gate):
         pass
+
 
 np.set_printoptions(suppress=True)
 
