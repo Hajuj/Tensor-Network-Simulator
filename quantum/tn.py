@@ -32,6 +32,20 @@ class QuantumGates:
         [0, 0, 1j, 0]
     ]).reshape(2, 2, 2, 2)
 
+def read_states_from_input_file(filename):
+    with open(filename, 'r') as file:
+        states = [line.strip() for line in file]
+    return states
+
+def write_amplitudes_to_output_file(filename, states, amplitudes):
+    with open(filename, 'w') as file:
+        for state, amplitude in zip(states, amplitudes):
+            file.write(f"{state} : {amplitude:.4f}\n")
+
+def write_probabilities_to_output_file(filename, states, probabilities):
+    with open(filename, 'w') as file:
+        for state, prob in zip(states, probabilities):
+            file.write(f"{state} : {prob:.4f}\n")
 
 class TNtemplate:
     circ = None
@@ -45,20 +59,43 @@ class TNtemplate:
             zero_tensor = np.zeros((2, 1, 1), dtype=complex)
             zero_tensor[0, 0, 0] = 1
             self.tensor_network.append(zero_tensor)
-            self.chi = 2
+            self.chi = 2000000
+
+    def get_final_state(self):
+      state = self.tensor_network[0]
+      for tensor in self.tensor_network[1:]:
+          state = np.tensordot(state, tensor, axes=([-1], [1]))
+      return state.reshape(-1)
+
+    def print_final_state(self):
+        state = self.get_final_state()
+        for idx, amplitude in enumerate(state):
+            if abs(amplitude) > 0.000001:
+              print(f"|{format(idx, 'b').zfill(self.circ.numQubits)}> : {amplitude:.4f}")
+
+    def compute_amplitude_for_state(self, state_str):
+      amplitude = np.array([[1]])
+      for i, tensor in enumerate(self.tensor_network):
+          index = int(state_str[i])  # Get the qubit state (0 or 1) from the state string
+          amplitude = np.matmul(amplitude, tensor[index])
+      return amplitude[0][0]
+
 
     def iterate_circ(self):
         if not self.circ:
             raise Exception("circ is None")
-        print("Initial Tensor:", self.tensor_network)
+        #print("Initial Tensor:", self.tensor_network)
         for gate in self.circ.gates:
             getattr(self, gate.name)(gate)
-            print(f"Gate {gate.name} applied!")
-            print("Tensornetwork after Gate:", self.tensor_network)
+            #print(f"Gate {gate} applied!")
+            #self.print_final_state()
+            #print("Tensornetwork after Gate:", self.tensor_network)
 
-        print("\nFINAL MPS")
-        for i, tensor in enumerate(self.tensor_network):
-            print(f"Qubit {i} Tensor is:\n{tensor}\n")
+        # print("\nFINAL MPS")
+        # for i, tensor in enumerate(self.tensor_network):
+        #     print(f"Qubit {i} Tensor is:\n{tensor}\n")
+
+        #self.print_final_state()
 
     def simulate(self):
         # Iterate Circuit
@@ -108,8 +145,8 @@ class TNtemplate:
         U = U[:, :chi_min]
         V_dagger = V_dagger[:chi_min, :]
 
-        print("Truncation to: ", chi_min, " from ", len(S),
-              " and S had shape: ", S.shape, " while S_diag trunc. has: ", S_diag.shape)
+        # print("Truncation to: ", chi_min, " from ", len(S),
+        #       " and S had shape: ", S.shape, " while S_diag trunc. has: ", S_diag.shape)
 
         # M = US, M' = V
         M_strich = np.array(np.vsplit(np.matmul(U, S_diag), 2))
@@ -131,7 +168,7 @@ class TNtemplate:
 
             for i in range(min_qubit, max_qubit - 1):
                 self.swap(Gate("swap", i, i + 1))
-                print(f"Swap: {i} <-> {i + 1}")
+                #print(f"Swap: {i} <-> {i + 1}")
 
             flag_control = 1 if gate.control == max_qubit else 0
 
@@ -145,7 +182,7 @@ class TNtemplate:
             # Bring tensor to original order
             for i in range(max_qubit - 1, min_qubit, -1):
                 self.swap(Gate("swap", i, i - 1))
-                print(f"Swap: {i} <-> {i - 1}")
+                #print(f"Swap: {i} <-> {i - 1}")
         else:
             self._apply_two_qubit_gate_logic(gate, u_gate)
 
@@ -173,7 +210,7 @@ class TNtemplate:
     def rz(self, gate):
         angle = gate.param
         angle = angle / 2
-        rz_gate = np.array([[np.cos(angle) - 1j * np.sin(angle), 0], [0, -np.cos(angle) + 1j * np.sin(angle)]])
+        rz_gate = np.array([[np.cos(angle) - 1j * np.sin(angle), 0], [0, np.cos(angle) + 1j * np.sin(angle)]])
         self.apply_single_qubit_gate(gate, rz_gate)
 
     def measure(self, gate):
@@ -182,8 +219,36 @@ class TNtemplate:
 
 np.set_printoptions(suppress=True)
 
-if __name__ == "__main__":
-    # c = parseQCP("code/QCPBench/small/test_n1.qcp")
-    c = parseQCP("QCPBench/small/test_n1.qcp")
-    simulator = TNtemplate(c)
+import os
+def main():
+    circuit_name = "random_entanglement_n30"  # Change this variable to the desired circuit name
+    
+    # Paths based on circuit_name
+    qcp_path = f"challenge/{circuit_name}.qcp"
+    input_txt_path = f"challenge/{circuit_name}_input.txt"
+    output_txt_path = f"challenge/results/{circuit_name}_output.txt"
+
+    # Ensure results directory exists
+    if not os.path.exists("challenge/results/"):
+        os.makedirs("challenge/results/")
+
+    # Parse the QCP file
+    circuit = parseQCP(qcp_path)
+
+    # Create an instance of your MPS simulator and simulate
+    simulator = TNtemplate(circuit)
     simulator.simulate()
+
+    # Read states from the input file
+    states = read_states_from_input_file(input_txt_path)
+
+    # Compute amplitudes & probabilities for the given states
+    amplitudes = [simulator.compute_amplitude_for_state(state) for state in states]
+    probabilities = [abs(amp)**2 for amp in amplitudes]
+    
+    # Write amplitudes & probabilities to the output file
+    #write_amplitudes_to_output_file(output_txt_path, states, amplitudes)
+    write_probabilities_to_output_file(output_txt_path, states, probabilities)
+
+if __name__ == "__main__":
+    main()

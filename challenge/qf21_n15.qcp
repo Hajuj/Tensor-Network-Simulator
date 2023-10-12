@@ -24,6 +24,7 @@ cx 9 12
 rz pi/4 10
 rz pi/4 12
 cx 9 10
+h 12
 rz pi/4 9
 rz -pi/4 10
 cx 9 10
@@ -38,6 +39,7 @@ cx 11 13
 rz pi/4 12
 rz pi/4 13
 cx 11 12
+h 13
 rz pi/4 11
 rz -pi/4 12
 cx 11 12
@@ -55,6 +57,7 @@ cx 11 13
 rz pi/4 12
 rz pi/4 13
 cx 11 12
+h 13
 rz pi/4 11
 rz -pi/4 12
 cx 11 12
@@ -69,6 +72,7 @@ cx 9 12
 rz pi/4 10
 rz pi/4 12
 cx 9 10
+h 12
 rz pi/4 9
 rz -pi/4 10
 cx 9 10

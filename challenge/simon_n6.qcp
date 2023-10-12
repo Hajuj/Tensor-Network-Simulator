@@ -17,6 +17,7 @@ cx 0 3
 rz pi/4 1
 rz pi/4 3
 cx 0 1
+h 3
 rz pi/4 0
 rz -pi/4 1
 cx 0 1
@@ -33,6 +34,7 @@ cx 0 3
 rz pi/4 1
 rz pi/4 3
 cx 0 1
+h 3
 rz pi/4 0
 rz -pi/4 1
 cx 0 1
