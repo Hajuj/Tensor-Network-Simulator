@@ -166,25 +166,19 @@ class TNtemplate:
         angle = gate.param
         angle = angle / 2
         rx_gate = np.array([[np.cos(angle), -1j * np.sin(angle)], [-1j * np.sin(angle), np.cos(angle)]])
-        target_tensor = self.tensor_network[gate.target]
-        modified_tensor = np.einsum('abc,dc->abd', target_tensor, rx_gate)
-        self.tensor_network[gate.target] = modified_tensor
+        self.apply_single_qubit_gate(gate, rx_gate)
 
     def ry(self, gate):
         angle = gate.param
         angle = angle / 2
         ry_gate = np.array([[np.cos(angle), -1 * np.sin(angle)], [np.sin(angle), np.cos(angle)]])
-        target_tensor = self.tensor_network[gate.target]
-        modified_tensor = np.einsum('abc,dc->abd', target_tensor, ry_gate)
-        self.tensor_network[gate.target] = modified_tensor
+        self.apply_single_qubit_gate(gate, ry_gate)
 
     def rz(self, gate):
         angle = gate.param
         angle = angle / 2
         rz_gate = np.array([[np.cos(angle) - 1j * np.sin(angle), 0], [0, -np.cos(angle) + 1j * np.sin(angle)]])
-        target_tensor = self.tensor_network[gate.target]
-        modified_tensor = np.einsum('abc,dc->abd', target_tensor, rz_gate)
-        self.tensor_network[gate.target] = modified_tensor
+        self.apply_single_qubit_gate(gate, rz_gate)
 
     def measure(self, gate):
         m0 = np.array([[1, 0], [0, 0]])
@@ -215,6 +209,6 @@ np.set_printoptions(suppress=True)
 
 if __name__ == "__main__":
     # c = parseQCP("code/QCPBench/small/test_n1.qcp")
-    c = parseQCP("../QCPBench/small/test_n1.qcp")
+    c = parseQCP("QCPBench/small/test_n1.qcp")
     simulator = TNtemplate(c)
     simulator.simulate()
