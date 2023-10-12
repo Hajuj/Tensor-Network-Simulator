@@ -83,7 +83,7 @@ class TNtemplate:
 
     def _apply_two_qubit_gate_logic(self, gate: Gate, u_gate: np.ndarray):
         # Decide the order of tensors and rearrange unitary if needed
-        ## reversed order
+        # reversed order
         if gate.control > gate.target:
             qubit0 = self.tensor_network[gate.target]
             qubit1 = self.tensor_network[gate.control]
@@ -95,15 +95,15 @@ class TNtemplate:
         # Two Qubit Gate Procedure
         T = np.einsum('abc,dce->adbe', qubit0, qubit1)
 
-        ## Contract U and T to T'
+        # Contract U and T to T'
         T_strich = np.einsum('abcd,cdef->abef', u_gate, T)
 
-        ## Apply SVD to obtain U, S, V^T
+        # Apply SVD to obtain U, S, V^T
         T_strich_reshaped = np.concatenate((np.concatenate((T_strich[0][0], T_strich[0][1]), axis=1),
                                             np.concatenate((T_strich[1][0], T_strich[1][1]), axis=1)), axis=0)
         U, S, V_dagger = np.linalg.svd(T_strich_reshaped, full_matrices=False)
 
-        chi_min = min(self.chi, len(S))  ## error checking for chi TODO: Make this more sophisticated
+        chi_min = min(self.chi, len(S))  # error checking for chi TODO: Make this more sophisticated
         S_diag = np.diag(S[:self.chi])
         U = U[:, :chi_min]
         V_dagger = V_dagger[:chi_min, :]
