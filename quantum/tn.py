@@ -114,7 +114,7 @@ class TNtemplate:
             min_qubit = min(gate.control, gate.target)
             max_qubit = max(gate.control, gate.target)
 
-            for i in range(min_qubit, max_qubit):
+            for i in range(min_qubit, max_qubit - 1):
                 self.swap(Gate("swap", i, i + 1))
                 print("Swap in the one direction, time: ", i)
 
