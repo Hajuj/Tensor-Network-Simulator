@@ -1,6 +1,35 @@
 from parseQCP import *
 import numpy as np
 
+class QuantumGates:
+    X = np.array([[0, 1], [1, 0]], dtype=complex)
+    Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
+    Z = np.array([[1, 0], [0, -1]], dtype=complex)
+    H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    SWAP = np.array([
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1]
+        ]).reshape(2, 2, 2, 2)
+    CX = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0]
+        ]).reshape(2, 2, 2, 2)
+    CZ = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, -1]
+        ]).reshape(2, 2, 2, 2)
+    CY = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, -1j],
+            [0, 0, 1j, 0]
+        ]).reshape(2, 2, 2, 2)
 
 class TNtemplate:
     circ = None
@@ -18,8 +47,8 @@ class TNtemplate:
 
     def iterate_circ(self):
         if (self.circ is None): raise Exception("circ is None")
+        print("Initial Tensor: ", self.tensor_network)
         for gate in self.circ.gates:
-            print("Tensornetwork before Gate: ", self.tensor_network)
             getattr(self, gate.name)(gate)
             print("Gate: ", gate.name, " applied!")
             print("Tensornetwork after Gate: ", self.tensor_network)
@@ -29,20 +58,16 @@ class TNtemplate:
         self.iterate_circ()
 
     def x(self, gate: Gate):
-        x_gate = np.array([[0, 1], [1, 0]])
-        self.apply_single_qubit_gate(gate, x_gate)
+        self.apply_single_qubit_gate(gate, QuantumGates.X)
 
     def y(self, gate: Gate):
-        y_gate = np.array([[0, -1j], [1j, 0]])
-        self.apply_single_qubit_gate(gate, y_gate)
+        self.apply_single_qubit_gate(gate, QuantumGates.Y)
 
     def z(self, gate: Gate):
-        z_gate = np.array([[1, 0], [0, -1]])
-        self.apply_single_qubit_gate(gate, z_gate)
+        self.apply_single_qubit_gate(gate, QuantumGates.Z)
 
     def h(self, gate: Gate):
-        h_gate = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-        self.apply_single_qubit_gate(gate, h_gate)
+        self.apply_single_qubit_gate(gate, QuantumGates.H)
 
     def apply_single_qubit_gate(self, gate: Gate, u_gate: np.ndarray):
         target_tensor = self.tensor_network[gate.target]
@@ -56,21 +81,15 @@ class TNtemplate:
             qubit0 = self.tensor_network[gate.target]
             qubit1 = self.tensor_network[gate.control]
             u_gate = np.swapaxes(np.swapaxes(u_gate, 0, 1), 2, 3)  # Swap control and target in the unitary
-            print("Have to Swap!!!!!!!!!!!!!!!!!!!!!!!!!")
         else:
             qubit0 = self.tensor_network[gate.control]
             qubit1 = self.tensor_network[gate.target]
-            print("No Swap!!!!!!!!!!!!!!!!!!!!!!!!!")
 
         # Two Qubit Gate Procedure
-        print("Control: ", qubit0)
-        print("Target: ", qubit1)
         T = np.einsum('abc,dce->adbe', qubit0, qubit1)
-        print("Contracted 4 dim T: ", T)
 
         ## Contract U and T to T'
         T_strich = np.einsum('abcd,cdef->abef', u_gate, T)
-        print("Contracted 4 dim UT aka. T': ", T_strich)
 
         ## Apply SVD to obtain U, S, V^T
         T_strich_reshaped = np.concatenate((np.concatenate((T_strich[0][0], T_strich[0][1]), axis=1),
@@ -89,24 +108,14 @@ class TNtemplate:
         M_strich = np.array(np.vsplit(np.matmul(U, S_diag), 2))
         M1_strich = np.array(np.hsplit(V_dagger, 2))
 
-        print("M_strich: ", M_strich)
-        print("M1_strich: ", M1_strich)
-
         if gate.control > gate.target:
             self.tensor_network[gate.target], self.tensor_network[gate.control] = M_strich, M1_strich
         else:
             self.tensor_network[gate.control], self.tensor_network[gate.target] = M_strich, M1_strich
 
-        print("Result: ", M_strich[1] @ M1_strich[1])
 
     def swap(self, gate):
-        U_swap = np.array([
-            [1, 0, 0, 0],
-            [0, 0, 1, 0],
-            [0, 1, 0, 0],
-            [0, 0, 0, 1]
-        ]).reshape(2, 2, 2, 2)
-        self.apply_two_qubit_gate(gate, U_swap)
+        self.apply_two_qubit_gate(gate, QuantumGates.SWAP)
 
     def apply_two_qubit_gate(self, gate, u_gate):
         delta = abs(gate.control - gate.target)
@@ -116,7 +125,7 @@ class TNtemplate:
 
             for i in range(min_qubit, max_qubit - 1):
                 self.swap(Gate("swap", i, i + 1))
-                print("Swap in the one direction, time: ", i)
+                print(f"Swap: {i} <-> {i + 1}")
 
             flag_control = 1 if gate.control == max_qubit else 0
 
@@ -130,37 +139,18 @@ class TNtemplate:
             # Bring tensor to original order
             for i in range(max_qubit - 1, min_qubit, -1):
                 self.swap(Gate("swap", i, i - 1))
-                print("Swap in the one direction, time: ", i)
+                print(f"Swap: {i} <-> {i - 1}")
         else:
             self._apply_two_qubit_gate_logic(gate, u_gate)
-            print("Apply Gate: ", gate.name)
 
     def cx(self, gate):
-        U_cx = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 0, 1],
-            [0, 0, 1, 0]
-        ]).reshape(2, 2, 2, 2)
-        self.apply_two_qubit_gate(gate, U_cx)
+        self.apply_two_qubit_gate(gate, QuantumGates.CX)
 
     def cz(self, gate):
-        U_cz = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, -1]
-        ]).reshape(2, 2, 2, 2)
-        self.apply_two_qubit_gate(gate, U_cz)
+        self.apply_two_qubit_gate(gate, QuantumGates.CZ)
 
     def cy(self, gate):
-        U_cy = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 0, -1j],
-            [0, 0, 1j, 0]
-        ]).reshape(2, 2, 2, 2)
-        self.apply_two_qubit_gate(gate, U_cy)
+        self.apply_two_qubit_gate(gate, QuantumGates.CY)
 
     def rx(self, gate):
         angle = gate.param
@@ -181,29 +171,7 @@ class TNtemplate:
         self.apply_single_qubit_gate(gate, rz_gate)
 
     def measure(self, gate):
-        m0 = np.array([[1, 0], [0, 0]])
-        m1 = np.array([[0, 0], [0, 1]])
-        m0_dagger = np.conj(m0).T
-        M_0 = np.matmul(m0_dagger, m0)
-
-        identity = np.identity(2)
-        identities = [identity for _ in range(self.circ.numQubits)]
-        identities[gate.target] = M_0
-        unitary = 1
-        for identity in identities:
-            unitary = np.kron(identity, unitary)
-        tensor_network_complex = np.conj(self.tensor_network).T
-        p_0 = np.matmul(np.matmul(tensor_network_complex, unitary), self.tensor_network)
-
-        random_choice = np.random.choice([0, 1], p=[p_0, (1 - p_0)])
-        M_m = m0 if random_choice == 0 else m1
-
-        numerator = np.matmul(M_m, self.tensor_network)
-        denominator = np.sqrt(np.matmul(np.matmul(tensor_network_complex, M_m), self.tensor_network))
-
-        result = numerator / denominator
-        self.tensor_network = np.matmul(result, self.tensor_network)
-
+        pass
 
 np.set_printoptions(suppress=True)
 

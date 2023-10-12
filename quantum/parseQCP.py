@@ -69,5 +69,5 @@ def parseQCP(path):
 
 
 if __name__ == "__main__":
-    c = parseQCP("../QCPBench/small/grover_n2.qcp")
+    c = parseQCP("QCPBench/small/grover_n2.qcp")
     print(c)
