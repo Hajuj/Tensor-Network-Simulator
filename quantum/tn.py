@@ -46,12 +46,17 @@ class TNtemplate:
             self.chi = 2
 
     def iterate_circ(self):
-        if (self.circ is None): raise Exception("circ is None")
-        print("Initial Tensor: ", self.tensor_network)
-        for gate in self.circ.gates:
-            getattr(self, gate.name)(gate)
-            print("Gate: ", gate.name, " applied!")
-            print("Tensornetwork after Gate: ", self.tensor_network)
+      if not self.circ:
+          raise Exception("circ is None")
+      print("Initial Tensor:", self.tensor_network)
+      for gate in self.circ.gates:
+          getattr(self, gate.name)(gate)
+          print(f"Gate {gate.name} applied!")
+          print("Tensornetwork after Gate:", self.tensor_network)
+
+      print("\nFINAL MPS")
+      for i, tensor in enumerate(self.tensor_network):
+          print(f"Qubit {i} Tensor is:\n{tensor}\n")
 
     def simulate(self):
         # Iterate Circuit
