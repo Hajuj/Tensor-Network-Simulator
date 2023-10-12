@@ -1,6 +1,7 @@
 import os
 import re
 
+# Returns a list of all .qcp circuit names in sorted order depending on the number of qubits involved
 def get_circuit_names(directory):
     # List all files in the given directory
     files = os.listdir(directory)
