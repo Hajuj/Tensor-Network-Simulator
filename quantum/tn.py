@@ -1,6 +1,8 @@
 from parseQCP import *
 import numpy as np
-
+import os
+import time
+import sys
 
 class QuantumGates:
     X = np.array([[0, 1], [1, 0]], dtype=complex)
@@ -42,24 +44,27 @@ def write_amplitudes_to_output_file(filename, states, amplitudes):
         for state, amplitude in zip(states, amplitudes):
             file.write(f"{state} : {amplitude:.4f}\n")
 
-def write_probabilities_to_output_file(filename, states, probabilities):
+def write_probabilities_to_output_file(filename, states, probabilities, elapsed_time):
     with open(filename, 'w') as file:
+        file.write(f"Wall Clock Time: {elapsed_time:.4f} seconds\n\n")  # Writing the elapsed time
         for state, prob in zip(states, probabilities):
             file.write(f"{state} : {prob:.4f}\n")
+
 
 class TNtemplate:
     circ = None
     tensor_network: np.ndarray
-    chi: int
 
-    def __init__(self, circ: QCPcircuit) -> None:
+    def __init__(self, circ: QCPcircuit, truncate=True, error_threshold=0.01) -> None:
         self.circ = circ
+        self.truncate = truncate
+        self.error_threshold = error_threshold
+
         self.tensor_network = []
         for i in range(self.circ.numQubits):
             zero_tensor = np.zeros((2, 1, 1), dtype=complex)
             zero_tensor[0, 0, 0] = 1
             self.tensor_network.append(zero_tensor)
-            self.chi = 2000000
 
     def get_final_state(self):
       state = self.tensor_network[0]
@@ -140,13 +145,33 @@ class TNtemplate:
                                             np.concatenate((T_strich[1][0], T_strich[1][1]), axis=1)), axis=0)
         U, S, V_dagger = np.linalg.svd(T_strich_reshaped, full_matrices=False)
 
-        chi_min = min(self.chi, len(S))  # error checking for chi TODO: Make this more sophisticated
-        S_diag = np.diag(S[:self.chi])
-        U = U[:, :chi_min]
-        V_dagger = V_dagger[:chi_min, :]
+        # Truncation
+        if self.truncate:
+            # Apply truncation logic if the truncate flag is True
+            cumulative_squared_error = 0.0
+            for idx, value in enumerate(reversed(S)):
+                next_error = cumulative_squared_error + value ** 2
+                if next_error > self.error_threshold:
+                    chi = len(S) - idx
+                    break
+                cumulative_squared_error = next_error
+            else:
+                chi = len(S)
+        else:
+            # If truncation is disabled, set chi to len(S)
+            chi = len(S)
 
-        # print("Truncation to: ", chi_min, " from ", len(S),
-        #       " and S had shape: ", S.shape, " while S_diag trunc. has: ", S_diag.shape)
+        if chi != len(S):
+            # If truncation is necessary, then adjust U, S, and V_dagger
+            S_diag = np.diag(S[:chi])
+            U = U[:, :chi]
+            V_dagger = V_dagger[:chi, :]
+        else:
+            # If no truncation is needed, just form the diagonal matrix from S
+            S_diag = np.diag(S)
+    
+
+        print(f"Gate {gate.name} ({gate.control}, {gate.target}): Determined chi={chi}, Original S length={len(S)}, Truncated={len(S) - chi}")
 
         # M = US, M' = V
         M_strich = np.array(np.vsplit(np.matmul(U, S_diag), 2))
@@ -156,6 +181,7 @@ class TNtemplate:
             self.tensor_network[gate.target], self.tensor_network[gate.control] = M_strich, M1_strich
         else:
             self.tensor_network[gate.control], self.tensor_network[gate.target] = M_strich, M1_strich
+
 
     def swap(self, gate):
         self.apply_two_qubit_gate(gate, QuantumGates.SWAP)
@@ -219,9 +245,8 @@ class TNtemplate:
 
 np.set_printoptions(suppress=True)
 
-import os
-def main():
-    circuit_name = "random_entanglement_n30"  # Change this variable to the desired circuit name
+def main(circuit_name):
+    #circuit_name = "ghz_n255"  # Change this variable to the desired circuit name
     
     # Paths based on circuit_name
     qcp_path = f"challenge/{circuit_name}.qcp"
@@ -235,10 +260,13 @@ def main():
     # Parse the QCP file
     circuit = parseQCP(qcp_path)
 
-    # Create an instance of your MPS simulator and simulate
-    simulator = TNtemplate(circuit)
-    simulator.simulate()
 
+    # Create an instance of your MPS simulator and simulate
+    start_time = time.time()
+    simulator = TNtemplate(circuit, truncate=True, error_threshold=0.01)
+    simulator.simulate()
+    elapsed_time = time.time() - start_time
+    
     # Read states from the input file
     states = read_states_from_input_file(input_txt_path)
 
@@ -248,7 +276,10 @@ def main():
     
     # Write amplitudes & probabilities to the output file
     #write_amplitudes_to_output_file(output_txt_path, states, amplitudes)
-    write_probabilities_to_output_file(output_txt_path, states, probabilities)
+    write_probabilities_to_output_file(output_txt_path, states, probabilities, elapsed_time)
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Please specify a circuit name!")
+        sys.exit(1)
+    main(sys.argv[1])

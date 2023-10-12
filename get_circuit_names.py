@@ -19,4 +19,4 @@ def get_circuit_names(directory):
 
 if __name__ == "__main__":
     circuit_names = get_circuit_names("challenge")
-    print(", ".join(['"' + name + '"' for name in circuit_names]))
+    print(" ".join(['"' + name + '"' for name in circuit_names]))
