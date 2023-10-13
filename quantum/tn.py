@@ -104,6 +104,7 @@ class TNtemplate:
                 print(f"At gate {i+1}/{total_gates}")
                 start_time = current_time  # Reset the timer
 
+
     def simulate(self):
         # Iterate Circuit
         self.iterate_circ()
