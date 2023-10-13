@@ -46,9 +46,9 @@ def write_amplitudes_to_output_file(filename, states, amplitudes):
 
 def write_probabilities_to_output_file(filename, states, probabilities, elapsed_time):
     with open(filename, 'w') as file:
-        file.write(f"Wall Clock Time: {elapsed_time:.4f} seconds\n\n")  # Writing the elapsed time
+        file.write(f"Wall Clock Time: {elapsed_time:.7f} seconds\n\n")  # Writing the elapsed time
         for state, prob in zip(states, probabilities):
-            file.write(f"{state} : {prob:.4f}\n")
+            file.write(f"{state} : {prob:.7f}\n")
 
 
 class TNtemplate:
@@ -89,18 +89,20 @@ class TNtemplate:
     def iterate_circ(self):
         if not self.circ:
             raise Exception("circ is None")
-        #print("Initial Tensor:", self.tensor_network)
-        for gate in self.circ.gates:
+            
+        total_gates = len(self.circ.gates)
+        start_time = time.time()
+
+        for i, gate in enumerate(self.circ.gates):
             getattr(self, gate.name)(gate)
-            #print(f"Gate {gate} applied!")
-            #self.print_final_state()
-            #print("Tensornetwork after Gate:", self.tensor_network)
+            
+            current_time = time.time()
+            elapsed_time = current_time - start_time
 
-        # print("\nFINAL MPS")
-        # for i, tensor in enumerate(self.tensor_network):
-        #     print(f"Qubit {i} Tensor is:\n{tensor}\n")
-
-        #self.print_final_state()
+            # Print progress every 60 seconds
+            if elapsed_time >= 10:
+                print(f"At gate {i+1}/{total_gates}")
+                start_time = current_time  # Reset the timer
 
     def simulate(self):
         # Iterate Circuit
@@ -171,7 +173,7 @@ class TNtemplate:
             S_diag = np.diag(S)
     
 
-        print(f"Gate {gate.name} ({gate.control}, {gate.target}): Determined chi={chi}, Original S length={len(S)}, Truncated={len(S) - chi}")
+        #print(f"Gate {gate.name} ({gate.control}, {gate.target}): Determined chi={chi}, Original S length={len(S)}, Truncated={len(S) - chi}")
 
         # M = US, M' = V
         M_strich = np.array(np.vsplit(np.matmul(U, S_diag), 2))
