@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # List of circuit names
-circuit_names=("qft_n4" "qrng_n4")
+circuit_names=("qrng_n4" "qft_n4" "error_correctiond3_n5" "simon_n6" "rsmvr_n9" "grover_n12" "qf21_n15" "qft_n29" "ghz_n255" "random_entanglement_n30" "vqe_uccsd_n28" "hhl_n14")
 total_circuits=${#circuit_names[@]}  # Total number of circuits
 
 echo "Started Simulating $total_circuits Circuits"
