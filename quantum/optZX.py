@@ -1,24 +1,20 @@
+import os
 import pyzx as zx
 import math
-from parseQCP import *
+import matplotlib.pyplot as plt
 
 
-class ZX:
-    circ = None
+class QuantumCircuitProcessor:
+    def __init__(self, file_path):
+        self.file_path = file_path
 
-    def __init__(self, circ: QCPcircuit) -> None:
-        self.circ = circ
-
-    # Function to parse and process the .qcp file
-    def process_qcp_file(self, file_path):
-        with open(file_path, 'r') as file:
+    def process_qcp_file(self):
+        with open(self.file_path, 'r') as file:
             lines = file.readlines()
 
-        # Create a PyZX circuit
         num_qubits = int(lines[1].strip())
-        circuit = zx.Circuit(self.circ.numQubits)
+        circuit = zx.Circuit(num_qubits)
 
-        # Process each gate operation
         for line in lines[2:]:
             tokens = line.strip().split()
             gate = tokens[0].lower()
@@ -34,17 +30,17 @@ class ZX:
             elif gate == 'h':
                 circuit.add_gate("HAD", int(tokens[1]))
             elif gate == 'rx':
-                angle = eval(tokens[1])  # Be careful with eval, ensure the input is safe
+                angle = eval(tokens[1], {'pi': math.pi})
                 circuit.add_gate("XPhase", int(tokens[2]), phase=angle / (2 * math.pi))
             elif gate == 'ry':
                 # Implementing RY gate using RX and RZ
-                angle = eval(tokens[1])
+                angle = eval(tokens[1], {'pi': math.pi})
                 circuit.add_gate("RZ", int(tokens[2]), phase=angle / (2 * math.pi))
                 circuit.add_gate("NOT", int(tokens[2]))
                 circuit.add_gate("RZ", int(tokens[2]), phase=-angle / (2 * math.pi))
                 circuit.add_gate("NOT", int(tokens[2]))
             elif gate == 'rz':
-                angle = eval(tokens[1])
+                angle = eval(tokens[1], {'pi': math.pi})
                 circuit.add_gate("ZPhase", int(tokens[2]), phase=angle / (2 * math.pi))
             elif gate == 'cx':
                 circuit.add_gate("CNOT", int(tokens[1]), int(tokens[2]))
@@ -55,7 +51,7 @@ class ZX:
                 circuit.add_gate("CNOT", int(tokens[1]), int(tokens[2]))
                 circuit.add_gate("S", int(tokens[2]), adjoint=True)
             elif gate == 'measure':
-                # PyZX doesn't have a direct measure gate, handle according to your needs
+                # PyZX doesn't have a direct measure gate
                 pass
             else:
                 print(f"Unsupported gate: {gate}")
@@ -63,8 +59,37 @@ class ZX:
         return circuit
 
 
+def main():
+    # Path to the 'challenge' directory
+    input_directory = os.path.join(os.pardir, 'challenge')
+    output_directory = os.path.join(input_directory, 'optimized')
+    os.makedirs(output_directory, exist_ok=True)
+
+    for file_name in os.listdir(input_directory):
+        if file_name.endswith(".qcp"):
+            file_path = os.path.join(input_directory, file_name)
+            processor = QuantumCircuitProcessor(file_path)
+            circuit = processor.process_qcp_file()
+
+            # Print the name of the file being processed
+            print(f"Processing File: {file_name}")
+
+            # Print the circuit to the console
+            print(circuit)
+
+            # Visualize the circuit (optional)
+            try:
+                zx.draw(circuit)
+                plt.show()
+            except ImportError:
+                print("Matplotlib not installed. Cannot visualize the circuit.")
+
+            # Apply PyZX optimization here
+            # For example: zx.full_reduce(circuit.to_graph())
+            # And then convert it back to a circuit if needed
+
+            processor.save_optimized_circuit(circuit, output_directory)
+
+
 if __name__ == "__main__":
-    # Example usage
-    file_path = parseQCP("../QCPBench/small/test_n1.qcp")  # Replace with the actual path to your .qcp file
-    circuit = ZX(file_path)
-    print(circuit)
+    main()

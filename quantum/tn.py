@@ -4,6 +4,7 @@ import os
 import time
 import sys
 
+
 class QuantumGates:
     X = np.array([[0, 1], [1, 0]], dtype=complex)
     Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
@@ -34,15 +35,18 @@ class QuantumGates:
         [0, 0, 1j, 0]
     ]).reshape(2, 2, 2, 2)
 
+
 def read_states_from_input_file(filename):
     with open(filename, 'r') as file:
         states = [line.strip() for line in file]
     return states
 
+
 def write_amplitudes_to_output_file(filename, states, amplitudes):
     with open(filename, 'w') as file:
         for state, amplitude in zip(states, amplitudes):
             file.write(f"{state} : {amplitude:.7f}\n")
+
 
 def write_probabilities_to_output_file(filename, states, probabilities, elapsed_time):
     with open(filename, 'w') as file:
@@ -67,43 +71,41 @@ class TNtemplate:
             self.tensor_network.append(zero_tensor)
 
     def get_final_state(self):
-      state = self.tensor_network[0]
-      for tensor in self.tensor_network[1:]:
-          state = np.tensordot(state, tensor, axes=([-1], [1]))
-      return state.reshape(-1)
+        state = self.tensor_network[0]
+        for tensor in self.tensor_network[1:]:
+            state = np.tensordot(state, tensor, axes=([-1], [1]))
+        return state.reshape(-1)
 
     def print_final_state(self):
         state = self.get_final_state()
         for idx, amplitude in enumerate(state):
             if abs(amplitude) > 0.000001:
-              print(f"|{format(idx, 'b').zfill(self.circ.numQubits)}> : {amplitude:.4f}")
+                print(f"|{format(idx, 'b').zfill(self.circ.numQubits)}> : {amplitude:.4f}")
 
     def compute_amplitude_for_state(self, state_str):
-      amplitude = np.array([[1]])
-      for i, tensor in enumerate(self.tensor_network):
-          index = int(state_str[i])  # Get the qubit state (0 or 1) from the state string
-          amplitude = np.matmul(amplitude, tensor[index])
-      return amplitude[0][0]
-
+        amplitude = np.array([[1]])
+        for i, tensor in enumerate(self.tensor_network):
+            index = int(state_str[i])  # Get the qubit state (0 or 1) from the state string
+            amplitude = np.matmul(amplitude, tensor[index])
+        return amplitude[0][0]
 
     def iterate_circ(self):
         if not self.circ:
             raise Exception("circ is None")
-            
+
         total_gates = len(self.circ.gates)
         start_time = time.time()
 
         for i, gate in enumerate(self.circ.gates):
             getattr(self, gate.name)(gate)
-            
+
             current_time = time.time()
             elapsed_time = current_time - start_time
 
             # Print progress every 60 seconds
             if elapsed_time >= 10:
-                print(f"At gate {i+1}/{total_gates}")
+                print(f"At gate {i + 1}/{total_gates}")
                 start_time = current_time  # Reset the timer
-
 
     def simulate(self):
         # Iterate Circuit
@@ -173,8 +175,7 @@ class TNtemplate:
             # If no truncation is needed, just form the diagonal matrix from S
             S_diag = np.diag(S)
 
-
-        #print(f"Gate {gate.name} ({gate.control}, {gate.target}): Determined chi={chi}, Original S length={len(S)}, Truncated={len(S) - chi}")
+        # print(f"Gate {gate.name} ({gate.control}, {gate.target}): Determined chi={chi}, Original S length={len(S)}, Truncated={len(S) - chi}")
 
         # M = US, M' = V
         M_strich = np.array(np.vsplit(np.matmul(U, S_diag), 2))
@@ -184,7 +185,6 @@ class TNtemplate:
             self.tensor_network[gate.target], self.tensor_network[gate.control] = M_strich, M1_strich
         else:
             self.tensor_network[gate.control], self.tensor_network[gate.target] = M_strich, M1_strich
-
 
     def swap(self, gate):
         self.apply_two_qubit_gate(gate, QuantumGates.SWAP)
@@ -197,7 +197,7 @@ class TNtemplate:
 
             for i in range(min_qubit, max_qubit - 1):
                 self.swap(Gate("swap", i, i + 1))
-                #print(f"Swap: {i} <-> {i + 1}")
+                # print(f"Swap: {i} <-> {i + 1}")
 
             flag_control = 1 if gate.control == max_qubit else 0
 
@@ -211,7 +211,7 @@ class TNtemplate:
             # Bring tensor to original order
             for i in range(max_qubit - 1, min_qubit, -1):
                 self.swap(Gate("swap", i, i - 1))
-                #print(f"Swap: {i} <-> {i - 1}")
+                # print(f"Swap: {i} <-> {i - 1}")
         else:
             self._apply_two_qubit_gate_logic(gate, u_gate)
 
@@ -248,9 +248,10 @@ class TNtemplate:
 
 np.set_printoptions(suppress=True)
 
+
 def main(circuit_name):
-    #circuit_name = "ghz_n255"  # Change this variable to the desired circuit name
-    
+    # circuit_name = "ghz_n255"  # Change this variable to the desired circuit name
+
     # Paths based on circuit_name
     qcp_path = f"challenge/{circuit_name}.qcp"
     input_txt_path = f"challenge/{circuit_name}_input.txt"
@@ -263,23 +264,23 @@ def main(circuit_name):
     # Parse the QCP file
     circuit = parseQCP(qcp_path)
 
-
     # Create an instance of your MPS simulator and simulate
     start_time = time.time()
     simulator = TNtemplate(circuit, truncate=True, error_threshold=0.01)
     simulator.simulate()
     elapsed_time = time.time() - start_time
-    
+
     # Read states from the input file
     states = read_states_from_input_file(input_txt_path)
 
     # Compute amplitudes & probabilities for the given states
     amplitudes = [simulator.compute_amplitude_for_state(state) for state in states]
-    probabilities = [abs(amp)**2 for amp in amplitudes]
-    
+    probabilities = [abs(amp) ** 2 for amp in amplitudes]
+
     # Write amplitudes & probabilities to the output file
-    #write_amplitudes_to_output_file(output_txt_path, states, amplitudes)
+    # write_amplitudes_to_output_file(output_txt_path, states, amplitudes)
     write_probabilities_to_output_file(output_txt_path, states, probabilities, elapsed_time)
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
