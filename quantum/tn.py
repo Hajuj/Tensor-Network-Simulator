@@ -42,7 +42,7 @@ def read_states_from_input_file(filename):
 def write_amplitudes_to_output_file(filename, states, amplitudes):
     with open(filename, 'w') as file:
         for state, amplitude in zip(states, amplitudes):
-            file.write(f"{state} : {amplitude:.4f}\n")
+            file.write(f"{state} : {amplitude:.7f}\n")
 
 def write_probabilities_to_output_file(filename, states, probabilities, elapsed_time):
     with open(filename, 'w') as file:
@@ -172,7 +172,6 @@ class TNtemplate:
             # If no truncation is needed, just form the diagonal matrix from S
             S_diag = np.diag(S)
 
-    
 
         #print(f"Gate {gate.name} ({gate.control}, {gate.target}): Determined chi={chi}, Original S length={len(S)}, Truncated={len(S) - chi}")
 
