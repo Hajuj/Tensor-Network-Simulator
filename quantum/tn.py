@@ -154,11 +154,11 @@ class TNtemplate:
             for idx, value in enumerate(reversed(S)):
                 next_error = cumulative_squared_error + value ** 2
                 if next_error > self.error_threshold:
-                    chi = len(S) - idx
+                    chi = max(1, len(S) - idx)  # Ensure at least one value remains
                     break
                 cumulative_squared_error = next_error
             else:
-                chi = len(S)
+                chi = max(1, len(S))  # Ensure at least one value remains
         else:
             # If truncation is disabled, set chi to len(S)
             chi = len(S)
@@ -171,6 +171,7 @@ class TNtemplate:
         else:
             # If no truncation is needed, just form the diagonal matrix from S
             S_diag = np.diag(S)
+
     
 
         #print(f"Gate {gate.name} ({gate.control}, {gate.target}): Determined chi={chi}, Original S length={len(S)}, Truncated={len(S) - chi}")
