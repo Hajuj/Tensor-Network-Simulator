@@ -1,4 +1,4 @@
-Wall Clock Time: 0.0730770 seconds
+Wall Clock Time: 0.5861590 seconds
 
 100000001000 : 0.0000000
 100000011000 : 0.0000000

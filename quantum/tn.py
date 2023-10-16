@@ -3,6 +3,8 @@ import numpy as np
 import os
 import time
 import sys
+from optZX import QuantumCircuitProcessor
+import matplotlib.pyplot as plt
 
 
 class QuantumGates:
@@ -49,6 +51,13 @@ def write_amplitudes_to_output_file(filename, states, amplitudes):
 
 
 def write_probabilities_to_output_file(filename, states, probabilities, elapsed_time):
+    # Get the directory name from the provided file path
+    dir_name = os.path.dirname(filename)
+
+    # If the directory does not exist and is not an empty string, create it
+    if dir_name and not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+
     with open(filename, 'w') as file:
         file.write(f"Wall Clock Time: {elapsed_time:.7f} seconds\n\n")  # Writing the elapsed time
         for state, prob in zip(states, probabilities):
@@ -249,7 +258,53 @@ class TNtemplate:
 np.set_printoptions(suppress=True)
 
 
-def main(circuit_name):
+def benchmark(optimize):
+    elapsed_times = []
+    for num_qubits in range(1, 21):
+        circuit_name = f"benchmark_circuit_{num_qubits}"
+
+        qcp_path = f"quantum_circuits/{circuit_name}.qcp"
+
+        if optimize:
+            zx_parser = QuantumCircuitProcessor(qcp_path)
+            zx_graph = zx_parser.process_qcp_file()
+            zx_graph_optimized = zx_parser.optimize_zx_graph(zx_graph)
+            circuit = zx_parser.get_circuit(zx_graph_optimized)
+
+        else:
+            # Parse the QCP file
+            circuit = parseQCP(qcp_path)
+
+        # Create an instance of your MPS simulator and simulate
+        start_time = time.time()
+        simulator = TNtemplate(circuit, truncate=False, error_threshold=0.01)
+        simulator.simulate()
+        elapsed_time = time.time() - start_time
+        print("Number of qubits: ", num_qubits, " Elapsed time: ", elapsed_time)
+        elapsed_times.append(elapsed_time)
+
+    # Create a figure and axis
+    fig, ax = plt.subplots()
+
+    # X axis would be the range of number of circuits
+    # Y axis would be the simulation times
+    ax.plot(range(1, len(elapsed_times) + 1), elapsed_times, marker='o', linestyle='-', color='b')
+
+    # Labeling the axes
+    ax.set_xlabel('Number of Qubits')
+    ax.set_ylabel('Elapsed Time (s)')
+
+    # Giving the plot a title
+    ax.set_title('Elapsed Time for Each Circuit Simulation')
+
+    # Set x-axis ticks to show only even integers from 1 to 20
+    ax.set_xticks([i for i in range(2, 21, 2)])
+
+    # Saving the plot to a file
+    plt.savefig("quantum_circuits/quantum_circuits_simulation_time_no_trunc.png")
+
+
+def main(circuit_name, optimize):
     # circuit_name = "ghz_n255"  # Change this variable to the desired circuit name
 
     # Paths based on circuit_name
@@ -261,8 +316,15 @@ def main(circuit_name):
     if not os.path.exists("challenge/results/"):
         os.makedirs("challenge/results/")
 
-    # Parse the QCP file
-    circuit = parseQCP(qcp_path)
+    if optimize:
+        zx_parser = QuantumCircuitProcessor(qcp_path)
+        zx_graph = zx_parser.process_qcp_file()
+        zx_graph_optimized = zx_parser.optimize_zx_graph(zx_graph)
+        circuit = zx_parser.get_circuit(zx_graph_optimized)
+
+    else:
+        # Parse the QCP file
+        circuit = parseQCP(qcp_path)
 
     # Create an instance of your MPS simulator and simulate
     start_time = time.time()
@@ -283,7 +345,8 @@ def main(circuit_name):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Please specify a circuit name!")
-        sys.exit(1)
-    main(sys.argv[1])
+    # if len(sys.argv) < 2:
+    #     print("Please specify a circuit name!")
+    #     sys.exit(1)
+    # main(sys.argv[1], optimize=True)
+    benchmark(optimize=False)

@@ -1,3 +1,14 @@
 //q: 0, 1
-2
+4
+ry pi/4 2
+cy 1 0
+h 0
+x 1
+y 3
+z 2
 rx pi/2 0
+rz pi 1
+cz 2 3
+cx 0 1
+cx 3 1
+measure 0
