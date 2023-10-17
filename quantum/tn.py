@@ -317,7 +317,7 @@ def main(circuit_name, optimize):
         os.makedirs("challenge/results/")
 
     if optimize:
-        zx_parser = QuantumCircuitProcessor(qcp_path)
+        zx_parser = QuantumCircuitProcessor(qcp_path, circuit_name)
         zx_graph = zx_parser.process_qcp_file()
         zx_graph_optimized = zx_parser.optimize_zx_graph(zx_graph)
         circuit = zx_parser.get_circuit(zx_graph_optimized)
@@ -345,8 +345,8 @@ def main(circuit_name, optimize):
 
 
 if __name__ == "__main__":
-    # if len(sys.argv) < 2:
-    #     print("Please specify a circuit name!")
-    #     sys.exit(1)
-    # main(sys.argv[1], optimize=True)
-    benchmark(optimize=False)
+    if len(sys.argv) < 2:
+        print("Please specify a circuit name!")
+        sys.exit(1)
+    main(sys.argv[1], optimize=True)
+    # benchmark(optimize=False)

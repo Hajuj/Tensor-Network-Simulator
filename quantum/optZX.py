@@ -2,14 +2,20 @@ import pyzx as zx
 import math
 from parseQCP import *
 import numpy as np
+import os
 
 
 class QuantumCircuitProcessor:
-    def __init__(self, file_path):
+    def __init__(self, file_path, circuit_name):
         self.file_path = file_path
+        self.circuit_name = circuit_name
         self.measurement_gates = []
         self.num_qubits = 0
         self.num_gates_before_reduction = 0
+
+        # Check if the directory exists, and create it if it doesn't
+        if not os.path.exists('plots'):
+            os.makedirs('plots')
 
     def process_qcp_file(self):
         with open(self.file_path, 'r') as file:
@@ -60,12 +66,34 @@ class QuantumCircuitProcessor:
 
         zx_graph = circuit.to_graph()
 
+        if zx_graph.vertices():
+            fig = zx.draw_matplotlib(zx_graph)
+            fig.savefig(f"plots/zx_graph_before_optimization_{self.circuit_name}.png")
+        else:
+            print("The graph is empty.")
+
+        print(zx_graph.vertices())
+
+        # zx.draw(zx_graph)
+        # plt.savefig(f"plots/zx_graph_before_optimization_{self.circuit_name}.png")
+
         return zx_graph
 
     def optimize_zx_graph(self, zx_graph):
         zx.full_reduce(zx_graph)
         # zx.teleport_reduce(zx_graph)
         zx_graph_optimized = zx.extract_circuit(zx_graph)
+
+        if zx_graph.vertices():
+            fig = zx.draw_matplotlib(zx_graph_optimized)
+            fig.savefig(f"plots/zx_graph_after_optimization_{self.circuit_name}.png")
+        else:
+            print("The graph is empty.")
+
+        print(zx_graph.vertices())
+
+        # zx.draw(zx_graph_optimized)
+        # plt.savefig(f"plots/zx_graph_after_optimization_{self.circuit_name}.png")
 
         return zx_graph_optimized
 
@@ -90,7 +118,7 @@ class QuantumCircuitProcessor:
         gates = [self._create_gate(gate) for gate in zx_graph_optimized.gates]
         num_gates_after_reduction = len(gates)
         circuit.gates = gates + self.measurement_gates
-        # print(circuit)
+        print(circuit)
         print("Before: ", self.num_gates_before_reduction - len(self.measurement_gates))
         print("After: ", num_gates_after_reduction)
         print("Percentage reduced: ", (self.num_gates_before_reduction - len(self.measurement_gates)) / num_gates_after_reduction)

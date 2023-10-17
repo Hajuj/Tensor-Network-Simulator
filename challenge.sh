@@ -15,7 +15,7 @@ completed=0
 for circuit_name in "${circuit_names[@]}"
 do
     echo "Started Simulating Circuit $circuit_name"
-    python3 quantum/tn.py $circuit_name
+    python3 quantum/tn.py $circuit_name --optimize=True
     echo "Finished Simulating Circuit $circuit_name"
 
     completed=$((completed+1))
